@@ -198,6 +198,25 @@ p {
   font-weight: 800;
 }
 
+.stats-pill {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 11px;
+  border: 1px solid rgba(143, 33, 25, 0.18);
+  border-radius: 999px;
+  color: var(--accent-dark);
+  background: rgba(208, 47, 34, 0.08);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.stats-pill span + span {
+  padding-left: 8px;
+  border-left: 1px solid rgba(143, 33, 25, 0.2);
+}
+
 .canvas-stage {
   display: grid;
   min-height: 560px;
@@ -483,6 +502,11 @@ input:disabled {
   transform: translateX(24px);
 }
 
+.export-actions {
+  display: grid;
+  gap: 10px;
+}
+
 .download-button {
   width: 100%;
   padding: 15px 18px;
@@ -506,6 +530,25 @@ input:disabled {
 
 .download-button:active {
   transform: translateY(0);
+}
+
+.feedback-link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(20, 60, 68, 0.2);
+  border-radius: 16px;
+  color: var(--blueprint);
+  background: rgba(20, 60, 68, 0.08);
+  font-weight: 900;
+  text-decoration: none;
+  transition: background 160ms ease, transform 160ms ease;
+}
+
+.feedback-link:hover {
+  background: rgba(20, 60, 68, 0.12);
+  transform: translateY(-1px);
 }
 
 @media (max-width: 1050px) {

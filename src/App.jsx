@@ -15,6 +15,7 @@ const MAX_CANVAS_SIDE = 8000
 const MIN_CANVAS_SIDE = 16
 const MAX_SPACING = 4000
 const MAX_THICKNESS = 80
+const FEEDBACK_FORM_URL = import.meta.env.VITE_FEEDBACK_FORM_URL
 
 function clampNumber(value, min, max, fallback) {
   const number = Number(value)
@@ -60,6 +61,22 @@ function rowLabel(index) {
 
 function baseName(filename) {
   return filename.replace(/\.[^.]+$/, '').replace(/[^a-z0-9-_]+/gi, '-').replace(/^-+|-+$/g, '') || 'image'
+}
+
+function reportUsageEvent(event, onStats) {
+  fetch('/api/stats', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ event }),
+    keepalive: true,
+  })
+    .then((response) => (response.ok ? response.json() : null))
+    .then((stats) => {
+      if (stats) {
+        onStats(stats)
+      }
+    })
+    .catch(() => {})
 }
 
 function renderGridCanvas(canvas, sourceImage, settings) {
@@ -142,7 +159,7 @@ function renderGridCanvas(canvas, sourceImage, settings) {
       outputHeight,
       verticals,
       horizontals,
-      color: settings.gridColor,
+      color: '#000000',
     })
   }
 
@@ -232,9 +249,11 @@ export default function App() {
   const canvasRef = useRef(null)
   const fileInputRef = useRef(null)
   const objectUrlRef = useRef(null)
+  const hasTrackedVisitRef = useRef(false)
   const [sourceImage, setSourceImage] = useState(null)
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [renderInfo, setRenderInfo] = useState(null)
+  const [usageStats, setUsageStats] = useState(null)
   const [message, setMessage] = useState('Grid-only mode is ready. Upload an image anytime.')
 
   const mode = sourceImage ? 'Image overlay' : 'Grid-only template'
@@ -266,6 +285,15 @@ export default function App() {
         URL.revokeObjectURL(objectUrlRef.current)
       }
     }
+  }, [])
+
+  useEffect(() => {
+    if (hasTrackedVisitRef.current) {
+      return
+    }
+
+    hasTrackedVisitRef.current = true
+    reportUsageEvent('visit', setUsageStats)
   }, [])
 
   function updateSetting(key, value) {
@@ -368,6 +396,7 @@ export default function App() {
       link.click()
       link.remove()
       window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+      reportUsageEvent('download', setUsageStats)
       setMessage('PNG downloaded with the current grid settings.')
     }, 'image/png')
   }
@@ -393,6 +422,12 @@ export default function App() {
               <div className="output-pill">
                 {renderInfo ? `${renderInfo.outputWidth} × ${renderInfo.outputHeight}px PNG` : 'Preparing canvas'}
               </div>
+              {usageStats && (
+                <div className="stats-pill" aria-label="Usage stats">
+                  <span>{usageStats.visits.toLocaleString()} visits</span>
+                  <span>{usageStats.downloads.toLocaleString()} downloads</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -542,9 +577,16 @@ export default function App() {
               />
             </label>
 
-            <button type="button" className="download-button" onClick={handleDownload}>
-              Download PNG
-            </button>
+            <div className="export-actions">
+              <button type="button" className="download-button" onClick={handleDownload}>
+                Download PNG
+              </button>
+              {FEEDBACK_FORM_URL && (
+                <a className="feedback-link" href={FEEDBACK_FORM_URL} target="_blank" rel="noreferrer">
+                  Send feedback
+                </a>
+              )}
+            </div>
           </section>
         </aside>
       </section>
