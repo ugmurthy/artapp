@@ -392,7 +392,10 @@ canvas {
   justify-content: space-between;
 }
 
-.title-with-action a {
+.api-key-link {
+  display: inline-flex;
+  width: fit-content;
+  margin-bottom: 10px;
   flex: 0 0 auto;
   color: var(--accent-dark);
   font-size: 0.78rem;
@@ -400,11 +403,48 @@ canvas {
   text-decoration: none;
 }
 
-.title-with-action a:hover {
+.api-key-link:hover {
   text-decoration: underline;
 }
 
-.group-title span {
+.collapsible-title {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+}
+
+.collapsible-title:hover {
+  background: transparent;
+}
+
+.expand-indicator {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid rgba(20, 60, 68, 0.18);
+  border-radius: 50%;
+  color: var(--blueprint);
+  background: rgba(20, 60, 68, 0.08);
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.collapsed-group .group-title {
+  margin-bottom: 0;
+}
+
+.collapsible-content {
+  display: grid;
+  gap: 12px;
+}
+
+.group-title > span,
+.group-title > div > span {
   display: grid;
   width: 34px;
   height: 34px;
@@ -924,7 +964,8 @@ button.sketch-stage {
     margin-bottom: 7px;
   }
 
-  .group-title span {
+  .group-title > span,
+  .group-title > div > span {
     width: 24px;
     height: 24px;
     font-size: 0.62rem;
@@ -932,6 +973,21 @@ button.sketch-stage {
 
   .group-title h2 {
     font-size: 1.25rem;
+  }
+
+  .api-key-link {
+    margin-bottom: 6px;
+    font-size: 0.7rem;
+  }
+
+  .collapsible-content {
+    gap: 7px;
+  }
+
+  .expand-indicator {
+    width: 24px;
+    height: 24px;
+    font-size: 0.86rem;
   }
 
   .file-drop {
@@ -1170,7 +1226,8 @@ button.sketch-stage {
     margin-bottom: 4px;
   }
 
-  .group-title span {
+  .group-title > span,
+  .group-title > div > span {
     width: 20px;
     height: 20px;
     font-size: 0.56rem;
@@ -1178,6 +1235,20 @@ button.sketch-stage {
 
   .group-title h2 {
     font-size: 1.05rem;
+  }
+
+  .api-key-link {
+    margin-bottom: 4px;
+  }
+
+  .collapsible-content {
+    gap: 5px;
+  }
+
+  .expand-indicator {
+    width: 20px;
+    height: 20px;
+    font-size: 0.75rem;
   }
 
   .file-drop {
@@ -1282,7 +1353,8 @@ button.sketch-stage {
     font-size: 0.98rem;
   }
 
-  .group-title span {
+  .group-title > span,
+  .group-title > div > span {
     width: 18px;
     height: 18px;
     font-size: 0.52rem;

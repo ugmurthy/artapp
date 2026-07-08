@@ -10,6 +10,7 @@ import {
 
 const DEFAULT_MODEL = 'qwen/qwen3.5-27b'
 const MODEL_STORAGE_KEY = 'sketchmentor.model'
+const API_KEY_LENGTH = 30
 const MAX_SKETCH_SIDE = 1800
 const SKETCH_JPEG_QUALITY = 0.86
 const INITIAL_PROMPT =
@@ -276,6 +277,8 @@ export default function SketchMentor() {
   const [statusTone, setStatusTone] = useState('info')
   const [isStreaming, setIsStreaming] = useState(false)
   const [isImageExpanded, setIsImageExpanded] = useState(true)
+  const [isApiKeyCommitted, setIsApiKeyCommitted] = useState(false)
+  const [isMeshExpanded, setIsMeshExpanded] = useState(true)
 
   const latestFeedback = useMemo(
     () => [...messages].reverse().find((message) => message.role === 'assistant')?.content || '',
@@ -288,6 +291,7 @@ export default function SketchMentor() {
     loadEncryptedApiKey().then((storedKey) => {
       if (isMounted && storedKey) {
         setApiKey(storedKey)
+        setIsApiKeyCommitted(storedKey.trim().length === API_KEY_LENGTH)
         setRememberKey(true)
         showStatus('Mesh API key loaded from encrypted browser storage.')
       }
@@ -304,6 +308,16 @@ export default function SketchMentor() {
       scrollFeedbackToBottom('smooth')
     }
   }, [messages, isStreaming])
+
+  useEffect(() => {
+    const isConfigured = isApiKeyCommitted && apiKey.trim().length === API_KEY_LENGTH && model.trim()
+
+    if (isConfigured) {
+      setIsMeshExpanded(false)
+    } else {
+      setIsMeshExpanded(true)
+    }
+  }, [apiKey, isApiKeyCommitted, model])
 
   function scrollFeedbackToBottom(behavior = 'smooth') {
     window.requestAnimationFrame(() => {
@@ -342,6 +356,30 @@ export default function SketchMentor() {
 
   async function handleApiKeyBlur() {
     await persistKeyIfNeeded()
+    commitApiKey()
+  }
+
+  function commitApiKey() {
+    const hasValidKey = apiKey.trim().length === API_KEY_LENGTH
+
+    setIsApiKeyCommitted(hasValidKey)
+    setIsMeshExpanded(!(hasValidKey && model.trim()))
+  }
+
+  function handleApiKeyChange(event) {
+    setApiKey(event.target.value)
+    setIsApiKeyCommitted(false)
+    setIsMeshExpanded(true)
+  }
+
+  async function handleApiKeyKeyDown(event) {
+    if (event.key !== 'Enter') {
+      return
+    }
+
+    event.preventDefault()
+    await persistKeyIfNeeded()
+    commitApiKey()
   }
 
   function handleModelChange(event) {
@@ -354,7 +392,9 @@ export default function SketchMentor() {
   async function handleClearKey() {
     abortRef.current?.abort()
     setApiKey('')
+    setIsApiKeyCommitted(false)
     setRememberKey(false)
+    setIsMeshExpanded(true)
     await clearEncryptedApiKey()
     showStatus('Mesh API key removed from this browser.')
   }
@@ -409,6 +449,12 @@ export default function SketchMentor() {
   async function requestFeedback(prompt = question.trim() || INITIAL_PROMPT) {
     if (!apiKey.trim()) {
       showError('Mesh API key is required before SketchMentor can generate feedback.')
+      return
+    }
+
+    if (apiKey.trim().length !== API_KEY_LENGTH) {
+      showError(`Mesh API key must be ${API_KEY_LENGTH} characters.`)
+      setIsMeshExpanded(true)
       return
     }
 
@@ -698,54 +744,69 @@ export default function SketchMentor() {
             )}
           </section>
 
-          <section className="control-group">
-            <div className="group-title title-with-action">
+          <section className={`control-group ${isMeshExpanded ? '' : 'collapsed-group'}`}>
+            <button
+              type="button"
+              className="group-title title-with-action collapsible-title"
+              onClick={() => setIsMeshExpanded((current) => !current)}
+              aria-expanded={isMeshExpanded}
+              aria-controls="mesh-settings"
+            >
               <div>
                 <span>02</span>
                 <h2>Mesh</h2>
               </div>
-              {!apiKey.trim() && (
-                <a href="https://meshapi.ai/" target="_blank" rel="noreferrer">
-                  Get API Key
-                </a>
-              )}
-            </div>
-
-            <label className="control" htmlFor="mesh-api-key">
-              <span>API key</span>
-              <input
-                id="mesh-api-key"
-                className="text-input"
-                type="password"
-                value={apiKey}
-                onBlur={handleApiKeyBlur}
-                onChange={(event) => setApiKey(event.target.value)}
-                placeholder="Mesh API key"
-                autoComplete="off"
-              />
-            </label>
-
-            <label className="control" htmlFor="mesh-model">
-              <span>Model</span>
-              <input
-                id="mesh-model"
-                className="text-input"
-                type="text"
-                value={model}
-                onChange={handleModelChange}
-              />
-            </label>
-
-            <label className="switch-row remember-row" htmlFor="remember-api-key">
-              <span>
-                Remember key (stored encrypted)
+              <span className="expand-indicator" aria-hidden="true">
+                {isMeshExpanded ? '−' : '+'}
               </span>
-              <input id="remember-api-key" type="checkbox" checked={rememberKey} onChange={handleRememberChange} />
-            </label>
-
-            <button type="button" className="ghost-button full-width" onClick={handleClearKey}>
-              Clear stored key
             </button>
+
+            {isMeshExpanded && (
+              <div id="mesh-settings" className="collapsible-content">
+                {!apiKey.trim() && (
+                  <a className="api-key-link" href="https://meshapi.ai/" target="_blank" rel="noreferrer">
+                    Get API Key
+                  </a>
+                )}
+
+                <label className="control" htmlFor="mesh-api-key">
+                  <span>API key</span>
+                  <input
+                    id="mesh-api-key"
+                    className="text-input"
+                    type="password"
+                    value={apiKey}
+                    onBlur={handleApiKeyBlur}
+                    onChange={handleApiKeyChange}
+                    onKeyDown={handleApiKeyKeyDown}
+                    placeholder="Mesh API key"
+                    autoComplete="off"
+                  />
+                </label>
+
+                <label className="control" htmlFor="mesh-model">
+                  <span>Model</span>
+                  <input
+                    id="mesh-model"
+                    className="text-input"
+                    type="text"
+                    value={model}
+                    onChange={handleModelChange}
+                  />
+                </label>
+
+                <label className="switch-row remember-row" htmlFor="remember-api-key">
+                  <span>
+                    Remember key (stored encrypted)
+                  </span>
+                  <input id="remember-api-key" type="checkbox" checked={rememberKey} onChange={handleRememberChange} />
+                </label>
+
+                <button type="button" className="ghost-button full-width" onClick={handleClearKey}>
+                  Clear stored key
+                </button>
+              </div>
+            )}
           </section>
 
           <section className="control-group">
