@@ -61,8 +61,10 @@ button:disabled {
 
 .app-shell {
   width: min(1500px, calc(100% - 32px));
+  height: 100dvh;
   margin: 0 auto;
   padding: 18px 0 36px;
+  overflow: hidden;
 }
 
 .section-kicker {
@@ -107,7 +109,9 @@ p {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(360px, 430px);
   gap: 22px;
-  align-items: start;
+  height: 100%;
+  min-height: 0;
+  align-items: stretch;
 }
 
 .hub-shell {
@@ -180,7 +184,11 @@ p {
 }
 
 .preview-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 14px;
   min-width: 0;
+  min-height: 0;
   padding: 22px;
 }
 
@@ -188,6 +196,8 @@ p {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(360px, 430px);
   gap: 22px;
+  height: 100%;
+  min-height: 0;
   align-items: stretch;
 }
 
@@ -237,7 +247,7 @@ p {
 .group-title h2 {
   margin: 0;
   font-family: Baskerville, "Iowan Old Style", Georgia, serif;
-  font-size: 2rem;
+  font-size: 1.5rem;
   line-height: 1;
 }
 
@@ -307,8 +317,8 @@ p {
 
 .canvas-stage {
   display: grid;
-  min-height: 560px;
-  max-height: 72vh;
+  min-height: 0;
+  max-height: none;
   place-items: center;
   overflow: auto;
   border: 1px solid rgba(36, 24, 13, 0.16);
@@ -326,7 +336,7 @@ p {
 canvas {
   display: block;
   max-width: 100%;
-  max-height: 68vh;
+  max-height: 100%;
   width: auto;
   height: auto;
   border-radius: 2px;
@@ -338,7 +348,6 @@ canvas {
   flex-wrap: wrap;
   gap: 10px 16px;
   justify-content: space-between;
-  margin-top: 14px;
   color: var(--muted);
   font-size: 0.94rem;
 }
@@ -351,6 +360,10 @@ canvas {
 .controls-panel {
   display: grid;
   gap: 14px;
+  align-content: start;
+  min-height: 0;
+  max-height: 100%;
+  overflow: auto;
   padding: 18px;
 }
 
@@ -366,6 +379,29 @@ canvas {
   gap: 12px;
   align-items: center;
   margin-bottom: 14px;
+}
+
+.group-title > div {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+}
+
+.title-with-action {
+  justify-content: space-between;
+}
+
+.title-with-action a {
+  flex: 0 0 auto;
+  color: var(--accent-dark);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.title-with-action a:hover {
+  text-decoration: underline;
 }
 
 .group-title span {
@@ -648,7 +684,7 @@ input:disabled {
 
 .sketch-stage {
   display: grid;
-  min-height: 420px;
+  min-height: clamp(210px, 38vh, 420px);
   place-items: center;
   overflow: hidden;
   width: 100%;
@@ -698,7 +734,7 @@ button.sketch-stage {
 .chat-panel {
   display: grid;
   min-height: 0;
-  max-height: 52vh;
+  max-height: none;
   gap: 12px;
   overflow: auto;
   padding: 14px;
@@ -802,16 +838,535 @@ button.sketch-stage {
   font-weight: 900;
 }
 
-@media (max-width: 1050px) {
+@media (max-height: 820px) and (min-width: 901px) {
+  .app-shell {
+    width: min(1500px, calc(100% - 20px));
+    padding: 10px 0;
+  }
+
+  .workspace,
+  .sketch-workspace {
+    grid-template-columns: minmax(0, 1fr) minmax(330px, 390px);
+    gap: 12px;
+  }
+
+  .preview-panel,
+  .controls-panel {
+    border-radius: 22px;
+  }
+
+  .preview-panel {
+    gap: 9px;
+    padding: 12px;
+  }
+
+  .controls-panel {
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .control-group {
+    padding: 9px;
+    border-radius: 16px;
+  }
+
+  .panel-heading {
+    gap: 10px;
+    margin-bottom: 0;
+  }
+
+  .brand-lockup {
+    gap: 3px;
+  }
+
+  .brand-lockup h1 {
+    font-size: clamp(1.65rem, 2.3vw, 2.25rem);
+    line-height: 0.96;
+  }
+
+  .brand-lockup p:not(.section-kicker) {
+    font-size: 0.86rem;
+    line-height: 1.26;
+  }
+
+  .section-kicker {
+    font-size: 0.64rem;
+    letter-spacing: 0.13em;
+  }
+
+  .header-pills {
+    gap: 6px;
+    max-width: 300px;
+  }
+
+  .mode-pill {
+    min-width: 126px;
+    padding: 7px 9px;
+    border-radius: 12px;
+  }
+
+  .mode-pill span {
+    font-size: 0.58rem;
+  }
+
+  .mode-pill strong {
+    font-size: 0.78rem;
+  }
+
+  .output-pill,
+  .stats-pill {
+    padding: 7px 9px;
+    font-size: 0.72rem;
+  }
+
+  .group-title {
+    gap: 8px;
+    margin-bottom: 7px;
+  }
+
+  .group-title span {
+    width: 24px;
+    height: 24px;
+    font-size: 0.62rem;
+  }
+
+  .group-title h2 {
+    font-size: 1.25rem;
+  }
+
+  .file-drop {
+    gap: 3px;
+    padding: 9px;
+    border-radius: 13px;
+  }
+
+  .file-drop strong {
+    font-size: 0.9rem;
+  }
+
+  .file-drop span,
+  .empty-note {
+    font-size: 0.76rem;
+  }
+
+  .source-card,
+  .empty-note {
+    margin-top: 6px;
+  }
+
+  .source-card {
+    gap: 9px;
+    padding: 8px;
+    border-radius: 13px;
+  }
+
+  .source-card span {
+    font-size: 0.62rem;
+  }
+
+  .source-card small,
+  .switch-row small,
+  .hint {
+    font-size: 0.73rem;
+    line-height: 1.24;
+  }
+
+  .hint {
+    margin-bottom: 7px;
+  }
+
+  .control-grid {
+    gap: 7px;
+  }
+
+  .control {
+    gap: 4px;
+  }
+
+  .control > span {
+    font-size: 0.66rem;
+  }
+
+  .number-input input,
+  .text-input,
+  .follow-up-control textarea {
+    padding: 7px 8px;
+  }
+
+  .follow-up-control textarea {
+    height: 58px;
+    resize: none;
+  }
+
+  .number-input small,
+  .color-input code {
+    font-size: 0.7rem;
+  }
+
+  .color-input {
+    gap: 7px;
+    padding: 5px 8px;
+  }
+
+  .color-input input {
+    width: 34px;
+    height: 26px;
+  }
+
+  .switch-row {
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .switch-row input {
+    width: 44px;
+    height: 24px;
+  }
+
+  .switch-row input::before {
+    top: 3px;
+    left: 3px;
+    width: 17px;
+    height: 17px;
+  }
+
+  .switch-row input:checked::before {
+    transform: translateX(19px);
+  }
+
+  .remember-row {
+    margin-top: 8px;
+  }
+
+  .export-actions {
+    gap: 7px;
+  }
+
+  .download-button {
+    padding: 10px 12px;
+    border-radius: 13px;
+    font-size: 0.9rem;
+  }
+
+  .feedback-link,
+  .action-link {
+    min-height: 36px;
+    border-radius: 12px;
+    font-size: 0.82rem;
+  }
+
+  .ghost-button {
+    padding: 6px 9px;
+    font-size: 0.78rem;
+  }
+
+  .canvas-stage,
+  .sketch-stage,
+  .chat-panel {
+    border-radius: 17px;
+  }
+
+  .preview-meta {
+    gap: 7px 10px;
+    font-size: 0.78rem;
+  }
+
+  .sketch-main-panel {
+    gap: 9px;
+  }
+
+  .sketch-stage {
+    min-height: clamp(145px, 27vh, 210px);
+  }
+
+  .sketch-stage img {
+    max-height: 34vh;
+  }
+
+  .sketch-stage.compact {
+    min-height: 120px;
+  }
+
+  .sketch-stage.compact img {
+    max-width: min(220px, 80%);
+    max-height: 105px;
+  }
+
+  .chat-panel {
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .chat-message {
+    gap: 5px;
+    padding: 9px;
+    border-radius: 12px;
+  }
+
+  .chat-message span {
+    font-size: 0.62rem;
+  }
+
+  .chat-message p,
+  .chat-message ul,
+  .chat-message ol {
+    font-size: 0.86rem;
+    line-height: 1.38;
+  }
+
+  .chat-message h1,
+  .chat-message h2,
+  .chat-message h3 {
+    margin: 6px 0 3px;
+  }
+
+  .status-note {
+    padding: 0 4px;
+    font-size: 0.78rem;
+    line-height: 1.28;
+  }
+}
+
+@media (max-height: 700px) and (min-width: 901px) {
+  .app-shell {
+    width: min(1500px, calc(100% - 16px));
+    padding: 6px 0;
+  }
+
+  .workspace,
+  .sketch-workspace {
+    gap: 10px;
+  }
+
+  .preview-panel {
+    gap: 7px;
+    padding: 9px;
+  }
+
+  .controls-panel {
+    gap: 6px;
+    padding: 7px;
+  }
+
+  .control-group {
+    padding: 6px;
+  }
+
+  .panel-heading {
+    gap: 8px;
+  }
+
+  .brand-lockup h1 {
+    font-size: clamp(1.45rem, 2vw, 1.95rem);
+  }
+
+  .file-drop span {
+    font-size: 0.7rem;
+    line-height: 1.18;
+  }
+
+  .group-title {
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+
+  .group-title span {
+    width: 20px;
+    height: 20px;
+    font-size: 0.56rem;
+  }
+
+  .group-title h2 {
+    font-size: 1.05rem;
+  }
+
+  .file-drop {
+    padding: 6px;
+  }
+
+  .file-drop strong {
+    font-size: 0.82rem;
+  }
+
+  .hint {
+    display: none;
+  }
+
+  .source-card {
+    margin-top: 4px;
+    padding: 6px;
+  }
+
+  .source-card small,
+  .switch-row small {
+    font-size: 0.68rem;
+  }
+
+  .control-grid,
+  .export-actions {
+    gap: 5px;
+  }
+
+  .number-input input,
+  .text-input,
+  .follow-up-control textarea {
+    padding: 5px 7px;
+  }
+
+  .follow-up-control textarea {
+    height: 44px;
+  }
+
+  .switch-row {
+    margin-bottom: 5px;
+  }
+
+  .download-button {
+    padding: 8px 10px;
+  }
+
+  .feedback-link,
+  .action-link {
+    min-height: 32px;
+  }
+
+  .sketch-stage {
+    min-height: clamp(110px, 22vh, 150px);
+  }
+
+  .sketch-stage.compact {
+    min-height: 92px;
+  }
+
+  .sketch-stage.compact img {
+    max-height: 78px;
+  }
+
+  .chat-panel {
+    padding: 6px;
+  }
+
+  .chat-message {
+    padding: 7px;
+  }
+}
+
+@media (max-height: 600px) and (min-width: 901px) {
+  .app-shell {
+    padding: 4px 0;
+  }
+
+  .preview-panel {
+    padding: 7px;
+  }
+
+  .controls-panel {
+    gap: 4px;
+    padding: 5px;
+  }
+
+  .control-group {
+    padding: 5px;
+  }
+
+  .brand-lockup h1 {
+    font-size: clamp(1.3rem, 1.8vw, 1.75rem);
+  }
+
+  .brand-lockup p:not(.section-kicker) {
+    font-size: 0.66rem;
+    line-height: 1.12;
+  }
+
+  .group-title h2 {
+    font-size: 0.98rem;
+  }
+
+  .group-title span {
+    width: 18px;
+    height: 18px;
+    font-size: 0.52rem;
+  }
+
+  .file-drop {
+    padding: 5px;
+  }
+
+  .source-card {
+    display: none;
+  }
+
+  .control > span {
+    font-size: 0.6rem;
+  }
+
+  .number-input input,
+  .text-input,
+  .follow-up-control textarea {
+    padding: 4px 6px;
+  }
+
+  .follow-up-control textarea {
+    height: 34px;
+  }
+
+  .switch-row {
+    margin-bottom: 3px;
+  }
+
+  .download-button {
+    padding: 7px 9px;
+  }
+
+  .feedback-link,
+  .action-link {
+    min-height: 29px;
+  }
+
+  .source-card small,
+  .switch-row small,
+  .status-note {
+    font-size: 0.62rem;
+    line-height: 1.14;
+  }
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
   .workspace,
   .sketch-workspace {
     grid-template-columns: 1fr;
+    height: auto;
     align-items: start;
   }
 
   .sketch-workspace > .preview-panel,
   .sketch-workspace > .controls-panel {
     height: auto;
+  }
+
+  .preview-panel,
+  .controls-panel {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .canvas-stage {
+    min-height: 360px;
+    max-height: 72vh;
+  }
+
+  canvas {
+    max-height: 68vh;
+  }
+
+  .chat-panel {
+    max-height: 52vh;
   }
 
   .controls-panel {

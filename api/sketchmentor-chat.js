@@ -167,7 +167,7 @@ export default async function handler(request, response) {
   }
 
   const apiKey = normalizeText(request.body?.apiKey)
-  const model = normalizeText(request.body?.model, 'openai/gpt-4o')
+  const model = normalizeText(request.body?.model, 'qwen/qwen3.5-27b')
   const imageDataUrl = request.body?.imageDataUrl
   const userPrompt = normalizeText(request.body?.userPrompt, 'Please review this sketch.')
 

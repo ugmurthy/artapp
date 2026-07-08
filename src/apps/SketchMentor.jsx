@@ -8,7 +8,7 @@ import {
   saveEncryptedApiKey,
 } from '../lib/secureKeyStore.js'
 
-const DEFAULT_MODEL = 'openai/gpt-4o'
+const DEFAULT_MODEL = 'qwen/qwen3.5-27b'
 const MODEL_STORAGE_KEY = 'sketchmentor.model'
 const MAX_SKETCH_SIDE = 1800
 const SKETCH_JPEG_QUALITY = 0.86
@@ -289,7 +289,7 @@ export default function SketchMentor() {
       if (isMounted && storedKey) {
         setApiKey(storedKey)
         setRememberKey(true)
-        showStatus('Stored Mesh API key loaded from encrypted browser storage.')
+        showStatus('Mesh API key loaded from encrypted browser storage.')
       }
     })
 
@@ -678,7 +678,7 @@ export default function SketchMentor() {
                 onChange={handleFileChange}
               />
               <strong>{image ? 'Replace sketch' : 'Choose sketch'}</strong>
-              <span>PNG, JPEG, or WebP. Nothing is stored by this app.</span>
+              <small>PNG,JPEG,WebP. Nothing is stored by this app.</small>
             </label>
 
             {image && (
@@ -699,9 +699,16 @@ export default function SketchMentor() {
           </section>
 
           <section className="control-group">
-            <div className="group-title">
-              <span>02</span>
-              <h2>Mesh</h2>
+            <div className="group-title title-with-action">
+              <div>
+                <span>02</span>
+                <h2>Mesh</h2>
+              </div>
+              {!apiKey.trim() && (
+                <a href="https://meshapi.ai/" target="_blank" rel="noreferrer">
+                  Get API Key
+                </a>
+              )}
             </div>
 
             <label className="control" htmlFor="mesh-api-key">
@@ -731,8 +738,7 @@ export default function SketchMentor() {
 
             <label className="switch-row remember-row" htmlFor="remember-api-key">
               <span>
-                <strong>Remember key</strong>
-                <small>Encrypted in this browser using Web Crypto.</small>
+                Remember key (stored encrypted)
               </span>
               <input id="remember-api-key" type="checkbox" checked={rememberKey} onChange={handleRememberChange} />
             </label>
@@ -762,10 +768,10 @@ export default function SketchMentor() {
               <textarea
                 id="follow-up-question"
                 value={question}
-                rows={4}
+                rows={2}
                 disabled={isStreaming}
                 onChange={(event) => setQuestion(event.target.value)}
-                placeholder="Ask about proportions, values, perspective, or how to practice the next step."
+                placeholder="Ask about proportions,values, or how to practice the next step."
               />
             </label>
 
