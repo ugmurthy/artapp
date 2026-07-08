@@ -626,9 +626,6 @@ export default function SketchMentor() {
               <h1 id="sketchmentor-title">Sketch feedback studio</h1>
               <p>Upload a sketch, stream constructive feedback through Mesh, then ask follow-up questions.</p>
             </div>
-            <a className="feedback-link nav-link" href="/">
-              All tools
-            </a>
           </div>
 
           <button
