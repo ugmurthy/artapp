@@ -7,6 +7,7 @@ const DEFAULT_SETTINGS = {
   verticalSpacing: 100,
   gridColor: '#c8c6c6',
   thickness: 2,
+  showDiagonalGrid: false,
   showLabels: true,
 }
 
@@ -144,6 +145,22 @@ function renderGridCanvas(canvas, sourceImage, settings) {
     const canvasY = originY + y
     context.moveTo(originX, canvasY)
     context.lineTo(originX + contentWidth, canvasY)
+  }
+
+  if (settings.showDiagonalGrid) {
+    for (let columnIndex = 0; columnIndex < verticals.length - 1; columnIndex += 1) {
+      for (let rowIndex = 0; rowIndex < horizontals.length - 1; rowIndex += 1) {
+        const left = originX + verticals[columnIndex]
+        const right = originX + verticals[columnIndex + 1]
+        const top = originY + horizontals[rowIndex]
+        const bottom = originY + horizontals[rowIndex + 1]
+
+        context.moveTo(left, top)
+        context.lineTo(right, bottom)
+        context.moveTo(right, top)
+        context.lineTo(left, bottom)
+      }
+    }
   }
 
   context.stroke()
@@ -574,6 +591,19 @@ export default function GridWright() {
                 type="checkbox"
                 checked={settings.showLabels}
                 onChange={(event) => updateSetting('showLabels', event.target.checked)}
+              />
+            </label>
+
+            <label className="switch-row" htmlFor="show-diagonal-grid">
+              <span>
+                <strong>Diagnol Grid</strong>
+                <small>Add X diagonals inside each grid cell</small>
+              </span>
+              <input
+                id="show-diagonal-grid"
+                type="checkbox"
+                checked={settings.showDiagonalGrid}
+                onChange={(event) => updateSetting('showDiagonalGrid', event.target.checked)}
               />
             </label>
 
