@@ -6,7 +6,7 @@ const DEFAULT_SETTINGS = {
   horizontalSpacing: 100,
   verticalSpacing: 100,
   gridColor: '#c8c6c6',
-  highContrast: true,
+  invertColors: true,
   thickness: 2,
   showDiagonalGrid: false,
   showLabels: true,
@@ -81,69 +81,6 @@ function reportUsageEvent(event, onStats) {
     .catch(() => {})
 }
 
-function drawContrastLine(context, imageData, originX, originY, startX, startY, endX, endY) {
-  const dx = endX - startX
-  const dy = endY - startY
-  const steps = Math.max(1, Math.ceil(Math.hypot(dx, dy)))
-  const { data, width, height } = imageData
-  const brightness = new Float32Array(steps)
-  const runs = []
-  let runStart = 0
-  let runColor = null
-
-  for (let step = 0; step < steps; step += 1) {
-    const x = Math.max(0, Math.min(width - 1, Math.floor(startX - originX + (dx * (step + 0.5)) / steps)))
-    const y = Math.max(0, Math.min(height - 1, Math.floor(startY - originY + (dy * (step + 0.5)) / steps)))
-    const index = (y * width + x) * 4
-    brightness[step] = 0.2126 * data[index] + 0.7152 * data[index + 1] + 0.0722 * data[index + 2]
-  }
-
-  // Smooth local image detail and retain the current color near the threshold.
-  let sum = 0
-  for (let i = 0; i < Math.min(4, steps); i += 1) sum += brightness[i]
-  for (let step = 0; step <= steps; step += 1) {
-    if (step + 4 < steps) sum += brightness[step + 4]
-    if (step >= 5) sum -= brightness[step - 5]
-    const count = Math.min(steps, step + 5) - Math.max(0, step - 4)
-    const average = sum / count
-    const threshold = runColor === '#000000' ? 115 : runColor === '#ffffff' ? 165 : 140
-    const color = step === steps ? null : average >= threshold ? '#000000' : '#ffffff'
-    if (color !== runColor) {
-      if (runColor) {
-        runs.push({ start: runStart, end: step, color: runColor })
-      }
-      runStart = step
-      runColor = color
-    }
-  }
-
-  const point = (step) => [startX + (dx * step) / steps, startY + (dy * step) / steps]
-  const stroke = (from, to, color) => {
-    context.strokeStyle = color
-    context.beginPath()
-    context.moveTo(...point(from))
-    context.lineTo(...point(to))
-    context.stroke()
-  }
-
-  runs.forEach((run, index) => {
-    const previous = runs[index - 1]
-    const next = runs[index + 1]
-    const fadeIn = previous && previous.end - previous.start >= 6 && run.end - run.start >= 6 ? 3 : 0
-    const fadeOut = next && next.end - next.start >= 6 && run.end - run.start >= 6 ? 3 : 0
-    stroke(run.start + fadeIn, run.end - fadeOut, run.color)
-
-    if (fadeOut) {
-      const [x1, y1] = point(run.end - fadeOut)
-      const [x2, y2] = point(run.end + fadeOut)
-      const gradient = context.createLinearGradient(x1, y1, x2, y2)
-      gradient.addColorStop(0, run.color)
-      gradient.addColorStop(1, next.color)
-      stroke(run.end - fadeOut, run.end + fadeOut, gradient)
-    }
-  })
-}
-
 function renderGridCanvas(canvas, sourceImage, settings) {
   const context = canvas.getContext('2d')
 
@@ -193,32 +130,23 @@ function renderGridCanvas(canvas, sourceImage, settings) {
   }
 
   context.save()
+  context.globalCompositeOperation = settings.invertColors ? 'difference' : 'source-over'
+  context.strokeStyle = settings.invertColors ? '#ffffff' : settings.gridColor
+  context.lineWidth = thickness
   context.lineCap = 'butt'
   context.lineJoin = 'miter'
-  context.lineWidth = thickness
-  const imageData = settings.highContrast && sourceImage
-    ? context.getImageData(originX, originY, contentWidth, contentHeight)
-    : null
-  const drawLine = imageData
-    ? (startX, startY, endX, endY) => drawContrastLine(context, imageData, originX, originY, startX, startY, endX, endY)
-    : (startX, startY, endX, endY) => {
-        context.moveTo(startX, startY)
-        context.lineTo(endX, endY)
-      }
-
-  if (!imageData) {
-    context.strokeStyle = settings.highContrast ? '#000000' : settings.gridColor
-    context.beginPath()
-  }
+  context.beginPath()
 
   for (const x of verticals) {
     const canvasX = originX + x
-    drawLine(canvasX, originY, canvasX, originY + contentHeight)
+    context.moveTo(canvasX, originY)
+    context.lineTo(canvasX, originY + contentHeight)
   }
 
   for (const y of horizontals) {
     const canvasY = originY + y
-    drawLine(originX, canvasY, originX + contentWidth, canvasY)
+    context.moveTo(originX, canvasY)
+    context.lineTo(originX + contentWidth, canvasY)
   }
 
   if (settings.showDiagonalGrid) {
@@ -229,15 +157,15 @@ function renderGridCanvas(canvas, sourceImage, settings) {
         const top = originY + horizontals[rowIndex]
         const bottom = originY + horizontals[rowIndex + 1]
 
-        drawLine(left, top, right, bottom)
-        drawLine(right, top, left, bottom)
+        context.moveTo(left, top)
+        context.lineTo(right, bottom)
+        context.moveTo(right, top)
+        context.lineTo(left, bottom)
       }
     }
   }
 
-  if (!imageData) {
-    context.stroke()
-  }
+  context.stroke()
   context.restore()
 
   if (settings.showLabels) {
@@ -641,23 +569,23 @@ export default function GridWright() {
                     id="grid-color"
                     type="color"
                     value={settings.gridColor}
-                    disabled={settings.highContrast}
+                    disabled={settings.invertColors}
                     onChange={(event) => updateSetting('gridColor', event.target.value)}
                   />
                   <code>{settings.gridColor}</code>
                 </div>
               </label>
             </div>
-            <label className="switch-row" htmlFor="high-contrast">
+            <label className="switch-row" htmlFor="invert-colors">
               <span>
-                <strong>Adaptive contrast</strong>
-                <small>Blend between black and white to contrast with the image</small>
+                <strong>Invert image colors</strong>
+                <small>Each gridline pixel inverts the image color beneath it</small>
               </span>
               <input
-                id="high-contrast"
+                id="invert-colors"
                 type="checkbox"
-                checked={settings.highContrast}
-                onChange={(event) => updateSetting('highContrast', event.target.checked)}
+                checked={settings.invertColors}
+                onChange={(event) => updateSetting('invertColors', event.target.checked)}
               />
             </label>
           </section>
