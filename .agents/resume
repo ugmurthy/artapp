@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# This app has no services or authentication to restore when an orb wakes.
