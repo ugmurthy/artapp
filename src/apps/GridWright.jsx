@@ -10,6 +10,7 @@ const DEFAULT_SETTINGS = {
   thickness: 2,
   showDiagonalGrid: false,
   showLabels: true,
+  labelFontSize: 12,
 }
 
 const LABEL_MARGIN = 56
@@ -17,6 +18,8 @@ const MAX_CANVAS_SIDE = 8000
 const MIN_CANVAS_SIDE = 16
 const MAX_SPACING = 4000
 const MAX_THICKNESS = 80
+const MIN_LABEL_FONT_SIZE = 6
+const MAX_LABEL_FONT_SIZE = 30
 const FEEDBACK_FORM_URL = import.meta.env.VITE_FEEDBACK_FORM_URL
 
 function clampNumber(value, min, max, fallback) {
@@ -179,6 +182,7 @@ function renderGridCanvas(canvas, sourceImage, settings) {
       verticals,
       horizontals,
       color: '#000000',
+      fontSize: settings.labelFontSize,
     })
   }
 
@@ -203,10 +207,11 @@ function drawLabels(context, details) {
     verticals,
     horizontals,
     color,
+    fontSize,
   } = details
 
   context.save()
-  context.font = '700 15px "Avenir Next", "Gill Sans", sans-serif'
+  context.font = `700 ${fontSize * 4 / 3}px "Avenir Next", "Gill Sans", sans-serif`
   context.textAlign = 'center'
   context.textBaseline = 'middle'
   context.fillStyle = color
@@ -285,6 +290,7 @@ export default function GridWright() {
       horizontalSpacing: clampInteger(settings.horizontalSpacing, 1, MAX_SPACING, DEFAULT_SETTINGS.horizontalSpacing),
       verticalSpacing: clampInteger(settings.verticalSpacing, 1, MAX_SPACING, DEFAULT_SETTINGS.verticalSpacing),
       thickness: clampNumber(settings.thickness, 0.5, MAX_THICKNESS, DEFAULT_SETTINGS.thickness),
+      labelFontSize: clampNumber(settings.labelFontSize, MIN_LABEL_FONT_SIZE, MAX_LABEL_FONT_SIZE, DEFAULT_SETTINGS.labelFontSize),
     }),
     [settings],
   )
@@ -608,6 +614,19 @@ export default function GridWright() {
                 onChange={(event) => updateSetting('showLabels', event.target.checked)}
               />
             </label>
+
+            <div className="control-grid two-col">
+              <NumericControl
+                id="label-font-size"
+                label="Border label font size"
+                min={MIN_LABEL_FONT_SIZE}
+                max={MAX_LABEL_FONT_SIZE}
+                value={normalizedSettings.labelFontSize}
+                disabled={!settings.showLabels}
+                suffix="pt"
+                onChange={(value) => updateNumberSetting('labelFontSize', value, MIN_LABEL_FONT_SIZE, MAX_LABEL_FONT_SIZE, DEFAULT_SETTINGS.labelFontSize)}
+              />
+            </div>
 
             <label className="switch-row" htmlFor="show-diagonal-grid">
               <span>
