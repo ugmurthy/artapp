@@ -40,13 +40,15 @@ function gridPositions(length, spacing) {
   const positions = []
   const safeLength = Math.max(1, Math.round(length))
   const safeSpacing = Math.max(1, Math.round(spacing))
+  const cellCount = Math.floor(safeLength / safeSpacing)
+  const offset = (safeLength - cellCount * safeSpacing) / 2
 
-  for (let position = 0; position <= safeLength; position += safeSpacing) {
-    positions.push(position)
+  if (cellCount === 0) {
+    return positions
   }
 
-  if (positions[positions.length - 1] !== safeLength) {
-    positions.push(safeLength)
+  for (let index = 0; index <= cellCount; index += 1) {
+    positions.push(offset + index * safeSpacing)
   }
 
   return positions
@@ -115,8 +117,13 @@ function renderGridCanvas(canvas, sourceImage, settings) {
     DEFAULT_SETTINGS.verticalSpacing,
   )
   const thickness = clampNumber(settings.thickness, 0.5, MAX_THICKNESS, DEFAULT_SETTINGS.thickness)
-  const verticals = gridPositions(contentWidth, verticalSpacing)
-  const horizontals = gridPositions(contentHeight, horizontalSpacing)
+  const hasWholeCells = contentWidth >= verticalSpacing && contentHeight >= horizontalSpacing
+  const verticals = hasWholeCells ? gridPositions(contentWidth, verticalSpacing) : []
+  const horizontals = hasWholeCells ? gridPositions(contentHeight, horizontalSpacing) : []
+  const gridLeft = originX + (verticals[0] ?? 0)
+  const gridTop = originY + (horizontals[0] ?? 0)
+  const gridRight = originX + (verticals.at(-1) ?? 0)
+  const gridBottom = originY + (horizontals.at(-1) ?? 0)
 
   canvas.width = outputWidth
   canvas.height = outputHeight
@@ -133,6 +140,10 @@ function renderGridCanvas(canvas, sourceImage, settings) {
   }
 
   context.save()
+  // Keep even thick boundary strokes out of the unused margins.
+  context.beginPath()
+  context.rect(gridLeft, gridTop, gridRight - gridLeft, gridBottom - gridTop)
+  context.clip()
   context.globalCompositeOperation = settings.invertColors ? 'difference' : 'source-over'
   context.strokeStyle = settings.invertColors ? '#ffffff' : settings.gridColor
   context.lineWidth = thickness
@@ -142,14 +153,14 @@ function renderGridCanvas(canvas, sourceImage, settings) {
 
   for (const x of verticals) {
     const canvasX = originX + x
-    context.moveTo(canvasX, originY)
-    context.lineTo(canvasX, originY + contentHeight)
+    context.moveTo(canvasX, gridTop)
+    context.lineTo(canvasX, gridBottom)
   }
 
   for (const y of horizontals) {
     const canvasY = originY + y
-    context.moveTo(originX, canvasY)
-    context.lineTo(originX + contentWidth, canvasY)
+    context.moveTo(gridLeft, canvasY)
+    context.lineTo(gridRight, canvasY)
   }
 
   if (settings.showDiagonalGrid) {
@@ -173,8 +184,6 @@ function renderGridCanvas(canvas, sourceImage, settings) {
 
   if (settings.showLabels) {
     drawLabels(context, {
-      contentWidth,
-      contentHeight,
       originX,
       originY,
       outputWidth,
@@ -198,8 +207,6 @@ function renderGridCanvas(canvas, sourceImage, settings) {
 
 function drawLabels(context, details) {
   const {
-    contentWidth,
-    contentHeight,
     originX,
     originY,
     outputWidth,
@@ -242,9 +249,6 @@ function drawLabels(context, details) {
     context.fillText(label, rightX, labelY)
   })
 
-  context.strokeStyle = color
-  context.lineWidth = 1.25
-  context.strokeRect(originX - 0.5, originY - 0.5, contentWidth + 1, contentHeight + 1)
   context.restore()
 }
 
