@@ -10,7 +10,7 @@ const DEFAULT_SETTINGS = {
   thickness: 2,
   showDiagonalGrid: false,
   showLabels: true,
-  labelFontSize: 12,
+  labelFontSize: 24,
 }
 
 const LABEL_MARGIN = 56

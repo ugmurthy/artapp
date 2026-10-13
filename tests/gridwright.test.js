@@ -26,6 +26,7 @@ test('Gridwright renders only centered whole cells', { timeout: 60000 }, async (
   await server.listen()
   await browser('open', `http://127.0.0.1:${server.httpServer.address().port}/gridwright`)
   await browser('wait', 'canvas')
+  assert.equal(await browser('eval', "document.getElementById('label-font-size').value"), '24')
 
   const cases = [
     { name: 'default with labels', width: 1024, height: 1024, x: 100, y: 100,
