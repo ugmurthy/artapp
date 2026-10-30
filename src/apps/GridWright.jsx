@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
 }
 
 const LABEL_MARGIN = 56
+const ALIGNMENT_MARKER_RADIUS = 16
 const MAX_CANVAS_SIDE = 8000
 const MIN_CANVAS_SIDE = 16
 const MAX_SPACING = 4000
@@ -99,7 +100,7 @@ function renderGridCanvas(canvas, sourceImage, settings) {
   const contentHeight = sourceImage
     ? sourceImage.height
     : clampInteger(settings.blankHeight, MIN_CANVAS_SIDE, MAX_CANVAS_SIDE, DEFAULT_SETTINGS.blankHeight)
-  const margin = settings.showLabels ? LABEL_MARGIN : 0
+  const margin = settings.showLabels ? LABEL_MARGIN : ALIGNMENT_MARKER_RADIUS + 2
   const outputWidth = contentWidth + margin * 2
   const outputHeight = contentHeight + margin * 2
   const originX = margin
@@ -181,6 +182,28 @@ function renderGridCanvas(canvas, sourceImage, settings) {
 
   context.stroke()
   context.restore()
+
+  if (hasWholeCells) {
+    context.save()
+    context.lineCap = 'butt'
+    context.beginPath()
+    for (const x of [gridLeft, gridRight]) {
+      for (const y of [gridTop, gridBottom]) {
+        context.moveTo(x - ALIGNMENT_MARKER_RADIUS, y)
+        context.lineTo(x + ALIGNMENT_MARKER_RADIUS, y)
+        context.moveTo(x, y - ALIGNMENT_MARKER_RADIUS)
+        context.lineTo(x, y + ALIGNMENT_MARKER_RADIUS)
+      }
+    }
+    // A white outline keeps the black registration crosses visible on dark artwork.
+    context.strokeStyle = '#ffffff'
+    context.lineWidth = 4
+    context.stroke()
+    context.strokeStyle = '#000000'
+    context.lineWidth = 2
+    context.stroke()
+    context.restore()
+  }
 
   if (settings.showLabels) {
     drawLabels(context, {

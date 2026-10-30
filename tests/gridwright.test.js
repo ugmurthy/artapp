@@ -7,7 +7,7 @@ import { createServer } from 'vite'
 
 const exec = promisify(execFile)
 
-test('Gridwright renders only centered whole cells', { timeout: 60000 }, async (t) => {
+test('Gridwright renders centered whole cells with corner alignment markers', { timeout: 60000 }, async (t) => {
   const server = await createServer({ server: { host: '127.0.0.1', port: 5175 } })
   const session = `grid-test-${process.pid}`
   async function browser(...args) {
@@ -88,9 +88,14 @@ test('Gridwright renders only centered whole cells', { timeout: 60000 }, async (
 
       const result = await browser('eval', `(${(s) => {
         const canvas = document.querySelector('canvas')
-        const margin = s.labels ? 56 : 0
-        const data = canvas.getContext('2d').getImageData(margin, margin, s.width, s.height).data
+        const margin = s.labels ? 56 : 18
+        const context = canvas.getContext('2d')
+        const data = context.getImageData(margin, margin, s.width, s.height).data
         const background = s.image ? [33, 99, 165] : [255, 255, 255]
+        const corners = s.bounds ? [
+          [s.bounds[0], s.bounds[1]], [s.bounds[2], s.bounds[1]],
+          [s.bounds[0], s.bounds[3]], [s.bounds[2], s.bounds[3]],
+        ] : []
         let changed = 0
         let gutterPixels = 0
         for (let y = 0; y < s.height; y++) {
@@ -98,6 +103,7 @@ test('Gridwright renders only centered whole cells', { timeout: 60000 }, async (
             const i = (y * s.width + x) * 4
             if (background.every((value, channel) => data[i + channel] === value)) continue
             changed++
+            if (corners.some(([cx, cy]) => Math.abs(x + 0.5 - cx) <= 18 && Math.abs(y + 0.5 - cy) <= 18)) continue
             if (!s.bounds || x + 1 <= s.bounds[0] || y + 1 <= s.bounds[1] || x >= s.bounds[2] || y >= s.bounds[3]) gutterPixels++
           }
         }
@@ -106,15 +112,19 @@ test('Gridwright renders only centered whole cells', { timeout: 60000 }, async (
           pixel(i === s.counts[0] ? Math.floor(s.bounds[2]) - 1 : Math.ceil(s.bounds[0] + i * s.x), Math.ceil(s.bounds[1] + s.y / 3))) : []
         const rowPixels = s.bounds ? Array.from({ length: s.counts[1] + 1 }, (_, i) =>
           pixel(Math.ceil(s.bounds[0] + s.x / 3), i === s.counts[1] ? Math.floor(s.bounds[3]) - 1 : Math.ceil(s.bounds[1] + i * s.y))) : []
+        const markerPixels = corners.flatMap(([x, y]) => [[-13, 0], [13, 0], [0, -13], [0, 13]].map(([dx, dy]) =>
+          Array.from(context.getImageData(Math.floor(margin + x + dx), Math.floor(margin + y + dy), 1, 1).data)))
         return { size: [canvas.width, canvas.height], meta: document.querySelector('.preview-meta').textContent,
-          changed, gutterPixels, linePixels, rowPixels }
+          changed, gutterPixels, linePixels, rowPixels, markerPixels }
       }})(${JSON.stringify(scenario)})`)
-      const margin = scenario.labels ? 112 : 0
+      const margin = scenario.labels ? 112 : 36
       assert.deepEqual(result.size, [scenario.width + margin, scenario.height + margin])
       assert.ok(result.meta.includes(`${scenario.counts[0]} columns · ${scenario.counts[1]} rows`))
-      assert.equal(result.gutterPixels, 0, 'unused strips must remain untouched')
+      assert.equal(result.gutterPixels, 0, 'unused strips stay untouched except for corner markers')
       if (scenario.bounds) {
         assert.ok(result.changed > 0, 'whole cells must be drawn')
+        assert.equal(result.markerPixels.length, 16)
+        for (const pixel of result.markerPixels) assert.deepEqual(pixel, [0, 0, 0, 255], 'all four arms of every corner marker must be visible')
         const color = scenario.invert ? [222, 156, 90] : [0, 0, 0]
         for (const pixel of [...result.linePixels, ...result.rowPixels]) assert.deepEqual(pixel, color)
       } else {
