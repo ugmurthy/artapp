@@ -8,6 +8,7 @@ const DEFAULT_SETTINGS = {
   gridColor: '#c8c6c6',
   invertColors: true,
   thickness: 2,
+  showGrid: true,
   showDiagonalGrid: false,
   showLabels: true,
   labelFontSize: 24,
@@ -180,7 +181,9 @@ function renderGridCanvas(canvas, sourceImage, settings) {
     }
   }
 
-  context.stroke()
+  if (settings.showGrid) {
+    context.stroke()
+  }
   context.restore()
 
   if (hasWholeCells) {
@@ -205,7 +208,7 @@ function renderGridCanvas(canvas, sourceImage, settings) {
     context.restore()
   }
 
-  if (settings.showLabels) {
+  if (settings.showGrid && settings.showLabels) {
     drawLabels(context, {
       originX,
       originY,
@@ -569,6 +572,18 @@ export default function GridWright() {
               <span>03</span>
               <h2>Grid rules</h2>
             </div>
+            <label className="switch-row" htmlFor="show-grid">
+              <span>
+                <strong>Show grid</strong>
+                <small>Switch off lines and labels; keep the four corner markers</small>
+              </span>
+              <input
+                id="show-grid"
+                type="checkbox"
+                checked={settings.showGrid}
+                onChange={(event) => updateSetting('showGrid', event.target.checked)}
+              />
+            </label>
             <div className="control-grid two-col">
               <NumericControl
                 id="horizontal-spacing"

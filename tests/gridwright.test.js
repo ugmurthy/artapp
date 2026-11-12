@@ -130,6 +130,42 @@ test('Gridwright renders centered whole cells with corner alignment markers', { 
       } else {
         assert.equal(result.changed, 0, 'no lines when a complete cell cannot fit')
       }
+
+      const hidden = await browser('eval', `(${async (s) => {
+        const canvas = document.querySelector('canvas')
+        const original = canvas.toDataURL()
+        const toggle = document.getElementById('show-grid')
+        const settle = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+        toggle.click()
+        await settle()
+        const margin = s.labels ? 56 : 18
+        const context = canvas.getContext('2d')
+        const data = context.getImageData(0, 0, canvas.width, canvas.height).data
+        const corners = s.bounds ? [
+          [s.bounds[0] + margin, s.bounds[1] + margin], [s.bounds[2] + margin, s.bounds[1] + margin],
+          [s.bounds[0] + margin, s.bounds[3] + margin], [s.bounds[2] + margin, s.bounds[3] + margin],
+        ] : []
+        let unexpectedPixels = 0
+        for (let y = 0; y < canvas.height; y++) {
+          for (let x = 0; x < canvas.width; x++) {
+            if (corners.some(([cx, cy]) => Math.abs(x + 0.5 - cx) <= 18 && Math.abs(y + 0.5 - cy) <= 18)) continue
+            const inContent = x >= margin && y >= margin && x < margin + s.width && y < margin + s.height
+            const background = inContent ? (s.image ? [33, 99, 165] : [255, 255, 255]) : [255, 253, 246]
+            const i = (y * canvas.width + x) * 4
+            if (background.some((value, channel) => data[i + channel] !== value) || data[i + 3] !== 255) unexpectedPixels++
+          }
+        }
+        const markerPixels = corners.flatMap(([x, y]) => [[-13, 0], [13, 0], [0, -13], [0, 13]].map(([dx, dy]) =>
+          Array.from(context.getImageData(Math.floor(x + dx), Math.floor(y + dy), 1, 1).data)))
+        const size = [canvas.width, canvas.height]
+        toggle.click()
+        await settle()
+        return { unexpectedPixels, markerPixels, size, restored: canvas.toDataURL() === original }
+      }})(${JSON.stringify(scenario)})`)
+      assert.equal(hidden.unexpectedPixels, 0, 'hiding the grid removes all lines, diagonals, and labels without changing the background')
+      assert.deepEqual(hidden.markerPixels, result.markerPixels, 'corner markers stay at the established grid corners')
+      assert.deepEqual(hidden.size, result.size, 'hiding the grid keeps output dimensions and alignment unchanged')
+      assert.equal(hidden.restored, true, 'showing the grid again restores the exact original output')
     })
   }
 })
