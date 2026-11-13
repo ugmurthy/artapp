@@ -187,11 +187,22 @@ function renderGridCanvas(canvas, sourceImage, settings) {
   context.restore()
 
   if (hasWholeCells) {
+    const gridWidth = gridRight - gridLeft
+    const gridHeight = gridBottom - gridTop
+    const markerXs = [gridLeft, gridRight]
+    const markerYs = [gridTop, gridBottom]
+
+    if (gridHeight > gridWidth) {
+      markerYs.push(gridTop + gridWidth)
+    } else if (gridWidth > gridHeight) {
+      markerXs.push(gridLeft + gridHeight)
+    }
+
     context.save()
     context.lineCap = 'butt'
     context.beginPath()
-    for (const x of [gridLeft, gridRight]) {
-      for (const y of [gridTop, gridBottom]) {
+    for (const x of markerXs) {
+      for (const y of markerYs) {
         context.moveTo(x - ALIGNMENT_MARKER_RADIUS, y)
         context.lineTo(x + ALIGNMENT_MARKER_RADIUS, y)
         context.moveTo(x, y - ALIGNMENT_MARKER_RADIUS)
@@ -575,7 +586,7 @@ export default function GridWright() {
             <label className="switch-row" htmlFor="show-grid">
               <span>
                 <strong>Show grid</strong>
-                <small>Switch off lines and labels; keep the four corner markers</small>
+                <small>Switch off lines and labels; keep corner and square alignment markers</small>
               </span>
               <input
                 id="show-grid"

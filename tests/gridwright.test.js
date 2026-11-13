@@ -32,20 +32,28 @@ test('Gridwright renders centered whole cells with corner alignment markers', { 
     { name: 'default with labels', width: 1024, height: 1024, x: 100, y: 100,
       labels: true, bounds: [12, 12, 1012, 1012], counts: [10, 10] },
     { name: 'unequal spacing and odd remainders', width: 357, height: 267, x: 100, y: 80,
-      bounds: [28.5, 13.5, 328.5, 253.5], counts: [3, 3] },
+      bounds: [28.5, 13.5, 328.5, 253.5], counts: [3, 3], squarePair: [[268.5, 13.5], [268.5, 253.5]] },
     { name: 'diagonals and thick lines with labels', width: 357, height: 267, x: 100, y: 80,
-      labels: true, diagonal: true, thickness: 10, bounds: [28.5, 13.5, 328.5, 253.5], counts: [3, 3] },
+      labels: true, diagonal: true, thickness: 10, bounds: [28.5, 13.5, 328.5, 253.5], counts: [3, 3],
+      squarePair: [[268.5, 13.5], [268.5, 253.5]] },
     { name: 'exact fit', width: 300, height: 240, x: 100, y: 80,
-      bounds: [0, 0, 300, 240], counts: [3, 3] },
+      bounds: [0, 0, 300, 240], counts: [3, 3], squarePair: [[240, 0], [240, 240]] },
     { name: 'one whole cell', width: 103, height: 83, x: 100, y: 80,
-      bounds: [1.5, 1.5, 101.5, 81.5], counts: [1, 1] },
+      bounds: [1.5, 1.5, 101.5, 81.5], counts: [1, 1], squarePair: [[81.5, 1.5], [81.5, 81.5]] },
+    { name: 'portrait image with square alignment markers', width: 267, height: 357, x: 80, y: 100,
+      image: true, invert: true, labels: true, diagonal: true,
+      bounds: [13.5, 28.5, 253.5, 328.5], counts: [3, 3], squarePair: [[13.5, 268.5], [253.5, 268.5]] },
+    { name: 'landscape canvas with a taller grid', width: 357, height: 347, x: 100, y: 160,
+      bounds: [28.5, 13.5, 328.5, 333.5], counts: [3, 2], squarePair: [[28.5, 313.5], [328.5, 313.5]] },
+    { name: 'non-square canvas with a square grid needs no extra markers', width: 357, height: 367, x: 100, y: 150,
+      bounds: [28.5, 33.5, 328.5, 333.5], counts: [3, 2] },
     { name: 'no whole column fits', width: 99, height: 267, x: 100, y: 80,
       labels: true, diagonal: true, counts: [0, 0] },
     { name: 'no whole row fits', width: 357, height: 79, x: 100, y: 80,
       counts: [0, 0] },
     { name: 'uploaded image with inverted diagonals', width: 357, height: 267, x: 100, y: 80,
       image: true, invert: true, labels: true, diagonal: true,
-      bounds: [28.5, 13.5, 328.5, 253.5], counts: [3, 3] },
+      bounds: [28.5, 13.5, 328.5, 253.5], counts: [3, 3], squarePair: [[268.5, 13.5], [268.5, 253.5]] },
   ]
 
   for (const scenario of cases) {
@@ -95,6 +103,7 @@ test('Gridwright renders centered whole cells with corner alignment markers', { 
         const corners = s.bounds ? [
           [s.bounds[0], s.bounds[1]], [s.bounds[2], s.bounds[1]],
           [s.bounds[0], s.bounds[3]], [s.bounds[2], s.bounds[3]],
+          ...(s.squarePair ?? []),
         ] : []
         let changed = 0
         let gutterPixels = 0
@@ -123,8 +132,8 @@ test('Gridwright renders centered whole cells with corner alignment markers', { 
       assert.equal(result.gutterPixels, 0, 'unused strips stay untouched except for corner markers')
       if (scenario.bounds) {
         assert.ok(result.changed > 0, 'whole cells must be drawn')
-        assert.equal(result.markerPixels.length, 16)
-        for (const pixel of result.markerPixels) assert.deepEqual(pixel, [0, 0, 0, 255], 'all four arms of every corner marker must be visible')
+        assert.equal(result.markerPixels.length, (4 + (scenario.squarePair?.length ?? 0)) * 4)
+        for (const pixel of result.markerPixels) assert.deepEqual(pixel, [0, 0, 0, 255], 'all four arms of every corner and square marker must be visible')
         const color = scenario.invert ? [222, 156, 90] : [0, 0, 0]
         for (const pixel of [...result.linePixels, ...result.rowPixels]) assert.deepEqual(pixel, color)
       } else {
@@ -142,9 +151,10 @@ test('Gridwright renders centered whole cells with corner alignment markers', { 
         const context = canvas.getContext('2d')
         const data = context.getImageData(0, 0, canvas.width, canvas.height).data
         const corners = s.bounds ? [
-          [s.bounds[0] + margin, s.bounds[1] + margin], [s.bounds[2] + margin, s.bounds[1] + margin],
-          [s.bounds[0] + margin, s.bounds[3] + margin], [s.bounds[2] + margin, s.bounds[3] + margin],
-        ] : []
+          [s.bounds[0], s.bounds[1]], [s.bounds[2], s.bounds[1]],
+          [s.bounds[0], s.bounds[3]], [s.bounds[2], s.bounds[3]],
+          ...(s.squarePair ?? []),
+        ].map(([x, y]) => [x + margin, y + margin]) : []
         let unexpectedPixels = 0
         for (let y = 0; y < canvas.height; y++) {
           for (let x = 0; x < canvas.width; x++) {
