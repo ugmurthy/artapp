@@ -46,6 +46,7 @@ body::before {
 
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
@@ -540,6 +541,10 @@ canvas {
   gap: 12px;
 }
 
+.control-grid + .hint {
+  margin-top: 12px;
+}
+
 .two-col {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -592,7 +597,8 @@ canvas {
   box-shadow: 0 0 0 4px rgba(208, 47, 34, 0.12);
 }
 
-input:disabled {
+input:disabled,
+select:disabled {
   cursor: not-allowed;
   opacity: 0.5;
 }

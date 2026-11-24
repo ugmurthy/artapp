@@ -1,72 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  DEFAULT_SETTINGS,
+  MAX_CANVAS_SIDE,
+  MIN_CANVAS_SIDE,
+  MAX_SPACING,
+  MAX_THICKNESS,
+  MIN_LABEL_FONT_SIZE,
+  MAX_LABEL_FONT_SIZE,
+  normalizeGridSettings,
+  renderGridCanvas,
+} from '../lib/imageGrid.js'
 
-const DEFAULT_SETTINGS = {
-  blankWidth: 1024,
-  blankHeight: 1024,
-  horizontalSpacing: 100,
-  verticalSpacing: 100,
-  gridColor: '#c8c6c6',
-  invertColors: true,
-  thickness: 2,
-  showGrid: true,
-  showDiagonalGrid: false,
-  showLabels: true,
-  labelFontSize: 24,
-}
-
-const LABEL_MARGIN = 56
-const ALIGNMENT_MARKER_RADIUS = 16
-const MAX_CANVAS_SIDE = 8000
-const MIN_CANVAS_SIDE = 16
-const MAX_SPACING = 4000
-const MAX_THICKNESS = 80
-const MIN_LABEL_FONT_SIZE = 6
-const MAX_LABEL_FONT_SIZE = 30
 const FEEDBACK_FORM_URL = import.meta.env.VITE_FEEDBACK_FORM_URL
-
-function clampNumber(value, min, max, fallback) {
-  const number = Number(value)
-
-  if (!Number.isFinite(number)) {
-    return fallback
-  }
-
-  return Math.min(max, Math.max(min, number))
-}
-
-function clampInteger(value, min, max, fallback) {
-  return Math.round(clampNumber(value, min, max, fallback))
-}
-
-function gridPositions(length, spacing) {
-  const positions = []
-  const safeLength = Math.max(1, Math.round(length))
-  const safeSpacing = Math.max(1, Math.round(spacing))
-  const cellCount = Math.floor(safeLength / safeSpacing)
-  const offset = (safeLength - cellCount * safeSpacing) / 2
-
-  if (cellCount === 0) {
-    return positions
-  }
-
-  for (let index = 0; index <= cellCount; index += 1) {
-    positions.push(offset + index * safeSpacing)
-  }
-
-  return positions
-}
-
-function rowLabel(index) {
-  let label = ''
-  let value = index
-
-  do {
-    label = String.fromCharCode(97 + (value % 26)) + label
-    value = Math.floor(value / 26) - 1
-  } while (value >= 0)
-
-  return label
-}
 
 function baseName(filename) {
   return filename.replace(/\.[^.]+$/, '').replace(/[^a-z0-9-_]+/gi, '-').replace(/^-+|-+$/g, '') || 'image'
@@ -86,207 +31,6 @@ function reportUsageEvent(event, onStats) {
       }
     })
     .catch(() => {})
-}
-
-function renderGridCanvas(canvas, sourceImage, settings) {
-  const context = canvas.getContext('2d')
-
-  if (!context) {
-    return null
-  }
-
-  const contentWidth = sourceImage
-    ? sourceImage.width
-    : clampInteger(settings.blankWidth, MIN_CANVAS_SIDE, MAX_CANVAS_SIDE, DEFAULT_SETTINGS.blankWidth)
-  const contentHeight = sourceImage
-    ? sourceImage.height
-    : clampInteger(settings.blankHeight, MIN_CANVAS_SIDE, MAX_CANVAS_SIDE, DEFAULT_SETTINGS.blankHeight)
-  const margin = settings.showLabels ? LABEL_MARGIN : ALIGNMENT_MARKER_RADIUS + 2
-  const outputWidth = contentWidth + margin * 2
-  const outputHeight = contentHeight + margin * 2
-  const originX = margin
-  const originY = margin
-  const horizontalSpacing = clampInteger(
-    settings.horizontalSpacing,
-    1,
-    MAX_SPACING,
-    DEFAULT_SETTINGS.horizontalSpacing,
-  )
-  const verticalSpacing = clampInteger(
-    settings.verticalSpacing,
-    1,
-    MAX_SPACING,
-    DEFAULT_SETTINGS.verticalSpacing,
-  )
-  const thickness = clampNumber(settings.thickness, 0.5, MAX_THICKNESS, DEFAULT_SETTINGS.thickness)
-  const hasWholeCells = contentWidth >= verticalSpacing && contentHeight >= horizontalSpacing
-  const verticals = hasWholeCells ? gridPositions(contentWidth, verticalSpacing) : []
-  const horizontals = hasWholeCells ? gridPositions(contentHeight, horizontalSpacing) : []
-  const gridLeft = originX + (verticals[0] ?? 0)
-  const gridTop = originY + (horizontals[0] ?? 0)
-  const gridRight = originX + (verticals.at(-1) ?? 0)
-  const gridBottom = originY + (horizontals.at(-1) ?? 0)
-
-  canvas.width = outputWidth
-  canvas.height = outputHeight
-
-  context.clearRect(0, 0, outputWidth, outputHeight)
-  context.fillStyle = '#fffdf6'
-  context.fillRect(0, 0, outputWidth, outputHeight)
-
-  if (sourceImage) {
-    context.drawImage(sourceImage.element, originX, originY, contentWidth, contentHeight)
-  } else {
-    context.fillStyle = '#ffffff'
-    context.fillRect(originX, originY, contentWidth, contentHeight)
-  }
-
-  context.save()
-  // Keep even thick boundary strokes out of the unused margins.
-  context.beginPath()
-  context.rect(gridLeft, gridTop, gridRight - gridLeft, gridBottom - gridTop)
-  context.clip()
-  context.globalCompositeOperation = settings.invertColors ? 'difference' : 'source-over'
-  context.strokeStyle = settings.invertColors ? '#ffffff' : settings.gridColor
-  context.lineWidth = thickness
-  context.lineCap = 'butt'
-  context.lineJoin = 'miter'
-  context.beginPath()
-
-  for (const x of verticals) {
-    const canvasX = originX + x
-    context.moveTo(canvasX, gridTop)
-    context.lineTo(canvasX, gridBottom)
-  }
-
-  for (const y of horizontals) {
-    const canvasY = originY + y
-    context.moveTo(gridLeft, canvasY)
-    context.lineTo(gridRight, canvasY)
-  }
-
-  if (settings.showDiagonalGrid) {
-    for (let columnIndex = 0; columnIndex < verticals.length - 1; columnIndex += 1) {
-      for (let rowIndex = 0; rowIndex < horizontals.length - 1; rowIndex += 1) {
-        const left = originX + verticals[columnIndex]
-        const right = originX + verticals[columnIndex + 1]
-        const top = originY + horizontals[rowIndex]
-        const bottom = originY + horizontals[rowIndex + 1]
-
-        context.moveTo(left, top)
-        context.lineTo(right, bottom)
-        context.moveTo(right, top)
-        context.lineTo(left, bottom)
-      }
-    }
-  }
-
-  if (settings.showGrid) {
-    context.stroke()
-  }
-  context.restore()
-
-  if (hasWholeCells) {
-    const gridWidth = gridRight - gridLeft
-    const gridHeight = gridBottom - gridTop
-    const markerXs = [gridLeft, gridRight]
-    const markerYs = [gridTop, gridBottom]
-
-    if (gridHeight > gridWidth) {
-      markerYs.push(gridTop + gridWidth)
-    } else if (gridWidth > gridHeight) {
-      markerXs.push(gridLeft + gridHeight)
-    }
-
-    context.save()
-    context.lineCap = 'butt'
-    context.beginPath()
-    for (const x of markerXs) {
-      for (const y of markerYs) {
-        context.moveTo(x - ALIGNMENT_MARKER_RADIUS, y)
-        context.lineTo(x + ALIGNMENT_MARKER_RADIUS, y)
-        context.moveTo(x, y - ALIGNMENT_MARKER_RADIUS)
-        context.lineTo(x, y + ALIGNMENT_MARKER_RADIUS)
-      }
-    }
-    // A white outline keeps the black registration crosses visible on dark artwork.
-    context.strokeStyle = '#ffffff'
-    context.lineWidth = 4
-    context.stroke()
-    context.strokeStyle = '#000000'
-    context.lineWidth = 2
-    context.stroke()
-    context.restore()
-  }
-
-  if (settings.showGrid && settings.showLabels) {
-    drawLabels(context, {
-      originX,
-      originY,
-      outputWidth,
-      outputHeight,
-      verticals,
-      horizontals,
-      color: '#000000',
-      fontSize: settings.labelFontSize,
-    })
-  }
-
-  return {
-    outputWidth,
-    outputHeight,
-    contentWidth,
-    contentHeight,
-    columnCount: Math.max(0, verticals.length - 1),
-    rowCount: Math.max(0, horizontals.length - 1),
-  }
-}
-
-function drawLabels(context, details) {
-  const {
-    originX,
-    originY,
-    outputWidth,
-    outputHeight,
-    verticals,
-    horizontals,
-    color,
-    fontSize,
-  } = details
-
-  context.save()
-  context.font = `700 ${fontSize * 4 / 3}px "Avenir Next", "Gill Sans", sans-serif`
-  context.textAlign = 'center'
-  context.textBaseline = 'middle'
-  context.fillStyle = color
-  context.strokeStyle = 'rgba(255, 253, 246, 0.92)'
-  context.lineWidth = 4
-
-  verticals.forEach((x, index) => {
-    const label = String(index)
-    const labelX = originX + x
-    const topY = originY / 2
-    const bottomY = outputHeight - originY / 2
-
-    context.strokeText(label, labelX, topY)
-    context.fillText(label, labelX, topY)
-    context.strokeText(label, labelX, bottomY)
-    context.fillText(label, labelX, bottomY)
-  })
-
-  horizontals.forEach((y, index) => {
-    const label = rowLabel(index)
-    const labelY = originY + y
-    const leftX = originX / 2
-    const rightX = outputWidth - originX / 2
-
-    context.strokeText(label, leftX, labelY)
-    context.fillText(label, leftX, labelY)
-    context.strokeText(label, rightX, labelY)
-    context.fillText(label, rightX, labelY)
-  })
-
-  context.restore()
 }
 
 function NumericControl({ id, label, value, min, max, step = 1, disabled, suffix = 'px', onChange }) {
@@ -324,15 +68,7 @@ export default function GridWright() {
   const mode = sourceImage ? 'Image overlay' : 'Grid-only template'
 
   const normalizedSettings = useMemo(
-    () => ({
-      ...settings,
-      blankWidth: clampInteger(settings.blankWidth, MIN_CANVAS_SIDE, MAX_CANVAS_SIDE, DEFAULT_SETTINGS.blankWidth),
-      blankHeight: clampInteger(settings.blankHeight, MIN_CANVAS_SIDE, MAX_CANVAS_SIDE, DEFAULT_SETTINGS.blankHeight),
-      horizontalSpacing: clampInteger(settings.horizontalSpacing, 1, MAX_SPACING, DEFAULT_SETTINGS.horizontalSpacing),
-      verticalSpacing: clampInteger(settings.verticalSpacing, 1, MAX_SPACING, DEFAULT_SETTINGS.verticalSpacing),
-      thickness: clampNumber(settings.thickness, 0.5, MAX_THICKNESS, DEFAULT_SETTINGS.thickness),
-      labelFontSize: clampNumber(settings.labelFontSize, MIN_LABEL_FONT_SIZE, MAX_LABEL_FONT_SIZE, DEFAULT_SETTINGS.labelFontSize),
-    }),
+    () => normalizeGridSettings(settings),
     [settings],
   )
 
@@ -341,7 +77,7 @@ export default function GridWright() {
       return
     }
 
-    const info = renderGridCanvas(canvasRef.current, sourceImage, normalizedSettings)
+    const info = renderGridCanvas(canvasRef.current, sourceImage?.element, normalizedSettings)
     setRenderInfo(info)
   }, [sourceImage, normalizedSettings])
 
@@ -364,10 +100,6 @@ export default function GridWright() {
 
   function updateSetting(key, value) {
     setSettings((current) => ({ ...current, [key]: value }))
-  }
-
-  function updateNumberSetting(key, value, min, max, fallback) {
-    updateSetting(key, clampNumber(value, min, max, fallback))
   }
 
   function handleFileChange(event) {
@@ -564,7 +296,7 @@ export default function GridWright() {
                 max={MAX_CANVAS_SIDE}
                 value={normalizedSettings.blankWidth}
                 disabled={Boolean(sourceImage)}
-                onChange={(value) => updateNumberSetting('blankWidth', value, MIN_CANVAS_SIDE, MAX_CANVAS_SIDE, DEFAULT_SETTINGS.blankWidth)}
+                onChange={(value) => updateSetting('blankWidth', value)}
               />
               <NumericControl
                 id="blank-height"
@@ -573,7 +305,7 @@ export default function GridWright() {
                 max={MAX_CANVAS_SIDE}
                 value={normalizedSettings.blankHeight}
                 disabled={Boolean(sourceImage)}
-                onChange={(value) => updateNumberSetting('blankHeight', value, MIN_CANVAS_SIDE, MAX_CANVAS_SIDE, DEFAULT_SETTINGS.blankHeight)}
+                onChange={(value) => updateSetting('blankHeight', value)}
               />
             </div>
           </section>
@@ -602,7 +334,7 @@ export default function GridWright() {
                 min={1}
                 max={MAX_SPACING}
                 value={normalizedSettings.horizontalSpacing}
-                onChange={(value) => updateNumberSetting('horizontalSpacing', value, 1, MAX_SPACING, DEFAULT_SETTINGS.horizontalSpacing)}
+                onChange={(value) => updateSetting('horizontalSpacing', value)}
               />
               <NumericControl
                 id="vertical-spacing"
@@ -610,7 +342,7 @@ export default function GridWright() {
                 min={1}
                 max={MAX_SPACING}
                 value={normalizedSettings.verticalSpacing}
-                onChange={(value) => updateNumberSetting('verticalSpacing', value, 1, MAX_SPACING, DEFAULT_SETTINGS.verticalSpacing)}
+                onChange={(value) => updateSetting('verticalSpacing', value)}
               />
               <NumericControl
                 id="line-thickness"
@@ -619,7 +351,7 @@ export default function GridWright() {
                 max={MAX_THICKNESS}
                 step={0.5}
                 value={normalizedSettings.thickness}
-                onChange={(value) => updateNumberSetting('thickness', value, 0.5, MAX_THICKNESS, DEFAULT_SETTINGS.thickness)}
+                onChange={(value) => updateSetting('thickness', value)}
               />
               <label className="control color-control" htmlFor="grid-color">
                 <span>Line color</span>
@@ -657,8 +389,8 @@ export default function GridWright() {
 
             <label className="switch-row" htmlFor="show-labels">
               <span>
-                <strong>Border labels</strong>
-                <small>Numbers on top/bottom, letters on left/right</small>
+                <strong>Show labels</strong>
+                <small>Label the outside border or each cell inside the grid</small>
               </span>
               <input
                 id="show-labels"
@@ -669,17 +401,62 @@ export default function GridWright() {
             </label>
 
             <div className="control-grid two-col">
+              <label className="control" htmlFor="label-placement">
+                <span>Label placement</span>
+                <select
+                  id="label-placement"
+                  className="text-input"
+                  value={settings.labelPlacement}
+                  disabled={!settings.showLabels}
+                  onChange={(event) => updateSetting('labelPlacement', event.target.value)}
+                >
+                  <option value="outside">Outside</option>
+                  <option value="inside">Inside cells</option>
+                </select>
+              </label>
+              <label className="control" htmlFor="label-corner">
+                <span>Inside corner</span>
+                <select
+                  id="label-corner"
+                  className="text-input"
+                  value={settings.labelCorner}
+                  disabled={!settings.showLabels || settings.labelPlacement !== 'inside'}
+                  onChange={(event) => updateSetting('labelCorner', event.target.value)}
+                >
+                  <option value="top-left">Top left</option>
+                  <option value="top-right">Top right</option>
+                  <option value="bottom-left">Bottom left</option>
+                  <option value="bottom-right">Bottom right</option>
+                </select>
+              </label>
               <NumericControl
                 id="label-font-size"
-                label="Border label font size"
+                label="Label font size"
                 min={MIN_LABEL_FONT_SIZE}
                 max={MAX_LABEL_FONT_SIZE}
                 value={normalizedSettings.labelFontSize}
                 disabled={!settings.showLabels}
                 suffix="pt"
-                onChange={(value) => updateNumberSetting('labelFontSize', value, MIN_LABEL_FONT_SIZE, MAX_LABEL_FONT_SIZE, DEFAULT_SETTINGS.labelFontSize)}
+                onChange={(value) => updateSetting('labelFontSize', value)}
               />
+              <label className="control color-control" htmlFor="label-color">
+                <span>Label color</span>
+                <div className="color-input">
+                  <input
+                    id="label-color"
+                    type="color"
+                    value={settings.labelColor}
+                    disabled={!settings.showLabels}
+                    onChange={(event) => updateSetting('labelColor', event.target.value)}
+                  />
+                  <code>{settings.labelColor}</code>
+                </div>
+              </label>
             </div>
+            <p className="hint">
+              Outside: numbers and row letters. Inside: A1, A2… across, B1, B2… down.
+              Use a smaller font for small cells.
+            </p>
 
             <label className="switch-row" htmlFor="show-diagonal-grid">
               <span>

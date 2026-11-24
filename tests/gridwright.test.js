@@ -178,4 +178,158 @@ test('Gridwright renders centered whole cells with corner alignment markers', { 
       assert.equal(hidden.restored, true, 'showing the grid again restores the exact original output')
     })
   }
+
+  await t.test('standalone module accepts images and partial options without React', async () => {
+    const result = await browser('eval', `(${async () => {
+      const { renderGridCanvas } = await import('/src/lib/imageGrid.js')
+      const canvas = document.createElement('canvas')
+      const defaults = renderGridCanvas(canvas)
+      const defaultPixels = canvas.toDataURL()
+      renderGridCanvas(canvas, null, {})
+      const emptyOptionsMatch = canvas.toDataURL() === defaultPixels
+      const image = new Image()
+      const source = document.createElement('canvas')
+      source.width = 357
+      source.height = 267
+      const context = source.getContext('2d')
+      context.fillStyle = '#2163a5'
+      context.fillRect(0, 0, 357, 267)
+      image.src = source.toDataURL()
+      await image.decode()
+      image.width = 12
+      image.height = 9
+      const partial = renderGridCanvas(canvas, image, { verticalSpacing: 80 })
+      const pixel = Array.from(canvas.getContext('2d').getImageData(100, 100, 1, 1).data)
+      const png = await new Promise(resolve => canvas.toBlob(resolve))
+      const exported = await createImageBitmap(png)
+      const exportedSize = [exported.width, exported.height]
+      exported.close()
+      renderGridCanvas(canvas, source, { verticalSpacing: 80 })
+      const canvasInputMatches = canvas.toDataURL()
+      renderGridCanvas(canvas, image, { verticalSpacing: 80 })
+      const sameSourcePixels = canvas.toDataURL() === canvasInputMatches
+      return { defaults, emptyOptionsMatch, partial, pixel, exportedSize, sameSourcePixels }
+    }})()`)
+    assert.deepEqual(result.defaults, {
+      outputWidth: 1136, outputHeight: 1136, contentWidth: 1024, contentHeight: 1024,
+      columnCount: 10, rowCount: 10,
+    })
+    assert.equal(result.emptyOptionsMatch, true)
+    assert.deepEqual(result.partial, {
+      outputWidth: 469, outputHeight: 379, contentWidth: 357, contentHeight: 267,
+      columnCount: 4, rowCount: 2,
+    })
+    assert.deepEqual(result.pixel, [33, 99, 165, 255], 'native image pixels survive independently of displayed image size')
+    assert.deepEqual(result.exportedSize, [469, 379])
+    assert.equal(result.sameSourcePixels, true, 'canvas and loaded image inputs produce the same result')
+  })
+
+  await t.test('inside labels render uppercase cell IDs in all four corners', async () => {
+    const result = await browser('eval', `(${async () => {
+      const { renderGridCanvas } = await import('/src/lib/imageGrid.js')
+      const canvas = document.createElement('canvas')
+      const reference = document.createElement('canvas')
+      const options = {
+        blankWidth: 357, blankHeight: 267, horizontalSpacing: 80,
+        labelPlacement: 'inside', labelFontSize: 12, labelColor: '#d02070',
+      }
+      const corners = [
+        { name: 'top-left', x: 53.5, y: 38.5, align: 'left', baseline: 'top' },
+        { name: 'top-right', x: 139.5, y: 38.5, align: 'right', baseline: 'top' },
+        { name: 'bottom-left', x: 53.5, y: 104.5, align: 'left', baseline: 'bottom' },
+        { name: 'bottom-right', x: 139.5, y: 104.5, align: 'right', baseline: 'bottom' },
+      ]
+      const results = []
+      for (const corner of corners) {
+        const info = renderGridCanvas(canvas, null, { ...options, labelCorner: corner.name })
+        reference.width = canvas.width
+        reference.height = canvas.height
+        const ctx = reference.getContext('2d')
+        ctx.fillStyle = '#ffffff'
+        ctx.fillRect(0, 0, reference.width, reference.height)
+        ctx.font = '700 16px "Avenir Next", "Gill Sans", sans-serif'
+        ctx.fillStyle = '#d02070'
+        ctx.textAlign = corner.align
+        ctx.textBaseline = corner.baseline
+        const labels = [['A1', 'A2', 'A3'], ['B1', 'B2', 'B3'], ['C1', 'C2', 'C3']]
+        labels.forEach((row, r) => row.forEach((label, c) => ctx.fillText(label, corner.x + c * 100, corner.y + r * 80)))
+        const actual = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data
+        const expected = ctx.getImageData(0, 0, reference.width, reference.height).data
+        let mismatchedLabelPixels = 0
+        let labelPixels = 0
+        for (let i = 0; i < actual.length; i += 4) {
+          const isLabel = data => data[i] === 208 && data[i + 1] === 32 && data[i + 2] === 112
+          if (isLabel(actual)) labelPixels++
+          if (isLabel(actual) !== isLabel(expected)) mismatchedLabelPixels++
+        }
+        results.push({ corner: corner.name, info, mismatchedLabelPixels, labelPixels })
+      }
+      renderGridCanvas(canvas, null, options)
+      const defaultCorner = canvas.toDataURL()
+      renderGridCanvas(canvas, null, { ...options, labelCorner: 'top-left' })
+      const defaultsToTopLeft = canvas.toDataURL() === defaultCorner
+      renderGridCanvas(canvas, null, { ...options, showGrid: false })
+      const gridHidden = canvas.toDataURL()
+      renderGridCanvas(canvas, null, { ...options, showLabels: false })
+      const noLabels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data
+      const labelsHidden = !Array.from({ length: noLabels.length / 4 }, (_, i) => i * 4)
+        .some(i => noLabels[i] === 208 && noLabels[i + 1] === 32 && noLabels[i + 2] === 112)
+      renderGridCanvas(canvas, null, { ...options, showGrid: false, showLabels: false })
+      const hiddenGridHasNoLabels = gridHidden === canvas.toDataURL()
+      renderGridCanvas(canvas, null, { ...options, blankWidth: 99 })
+      const noCells = { width: canvas.width, height: canvas.height,
+        pixel: Array.from(canvas.getContext('2d').getImageData(30, 30, 1, 1).data) }
+      return { results, defaultsToTopLeft, labelsHidden, hiddenGridHasNoLabels, noCells }
+    }})()`)
+    for (const corner of result.results) {
+      assert.deepEqual(corner.info, {
+        outputWidth: 393, outputHeight: 303, contentWidth: 357, contentHeight: 267,
+        columnCount: 3, rowCount: 3,
+      })
+      assert.ok(corner.labelPixels > 200, `${corner.corner}: colored labels must be visible`)
+      assert.equal(corner.mismatchedLabelPixels, 0, `${corner.corner}: correct IDs, font size, color, and positions`)
+    }
+    assert.equal(result.defaultsToTopLeft, true)
+    assert.equal(result.labelsHidden, true)
+    assert.equal(result.hiddenGridHasNoLabels, true)
+    assert.deepEqual(result.noCells, { width: 135, height: 303, pixel: [255, 255, 255, 255] })
+  })
+
+  await t.test('label controls update the actual preview and PNG pixels', async () => {
+    await browser('reload')
+    await browser('wait', 'canvas')
+    assert.equal(await browser('eval', "document.getElementById('label-placement').value"), 'outside')
+    assert.equal(await browser('eval', "document.getElementById('label-corner').disabled"), true)
+    await browser('select', '#label-placement', 'inside')
+    assert.equal(await browser('eval', "document.getElementById('label-corner').disabled"), false)
+    await browser('select', '#label-corner', 'bottom-right')
+    await browser('fill', '#label-font-size', '12')
+    await browser('eval', `(() => {
+      const input = document.getElementById('label-color')
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, '#d02070')
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+    })()`)
+    const result = await browser('eval', `(${async () => {
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+      const { renderGridCanvas } = await import('/src/lib/imageGrid.js')
+      const preview = document.querySelector('canvas')
+      const expected = document.createElement('canvas')
+      renderGridCanvas(expected, null, {
+        labelPlacement: 'inside', labelCorner: 'bottom-right', labelFontSize: 12, labelColor: '#d02070',
+      })
+      const png = await new Promise(resolve => preview.toBlob(resolve))
+      const decoded = await createImageBitmap(png)
+      const exported = document.createElement('canvas')
+      exported.width = decoded.width
+      exported.height = decoded.height
+      exported.getContext('2d').drawImage(decoded, 0, 0)
+      decoded.close()
+      return { matchesModule: preview.toDataURL() === expected.toDataURL(),
+        pngMatchesPreview: exported.toDataURL() === preview.toDataURL() }
+    }})()`)
+    assert.equal(result.matchesModule, true)
+    assert.equal(result.pngMatchesPreview, true)
+    await browser('uncheck', '#show-labels')
+    assert.equal(await browser('eval', "['label-placement', 'label-corner', 'label-font-size', 'label-color'].every(id => document.getElementById(id).disabled)"), true)
+  })
 })
